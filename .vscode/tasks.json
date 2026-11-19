@@ -1,0 +1,21 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "1 - API EMAIL (5001)",
+      "type": "shell",
+      "command": "python app_email.py",
+      "options": { "cwd": "${workspaceFolder}/api_email" },
+      "isBackground": true,
+      "presentation": { "panel": "dedicated", "group": "disparador" }
+    },
+    {
+      "label": "2 - API CLIENTE (5000)",
+      "type": "shell",
+      "command": "python app_cliente.py",
+      "options": { "cwd": "${workspaceFolder}/api_cliente" },
+      "isBackground": true,
+      "presentation": { "panel": "dedicated", "group": "disparador" }
+    }
+  ]
+}

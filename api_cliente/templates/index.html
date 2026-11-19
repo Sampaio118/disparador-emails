@@ -1,0 +1,429 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Disparador de E-mails | Painel de Controle</title>
+    <style>
+        :root {
+            --bg: #f8fafc;
+            --card: #ffffff;
+            --border: #e2e8f0;
+            --text: #0f172a;
+            --muted: #64748b;
+            --primary: #2563eb;
+            --primary-hover: #1d4ed8;
+            --success: #16a34a;
+            --danger: #dc2626;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        }
+
+        body {
+            background-color: var(--bg);
+            color: var(--text);
+            padding: 32px 20px;
+            line-height: 1.5;
+        }
+
+        .container {
+            max-width: 1040px;
+            margin: 0 auto;
+        }
+
+        header {
+            margin-bottom: 28px;
+            border-bottom: 1px solid var(--border);
+            padding-bottom: 16px;
+        }
+
+        header h1 {
+            font-size: 1.5rem;
+            font-weight: 700;
+            letter-spacing: -0.02em;
+        }
+
+        header p {
+            color: var(--muted);
+            font-size: 0.9rem;
+            margin-top: 4px;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-bottom: 24px;
+        }
+
+        @media (max-width: 768px) {
+            .grid { grid-template-columns: 1fr; }
+        }
+
+        .card {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+        }
+
+        .card h2 {
+            font-size: 1.05rem;
+            font-weight: 600;
+            margin-bottom: 16px;
+        }
+
+        .form-group {
+            margin-bottom: 14px;
+        }
+
+        label {
+            display: block;
+            font-size: 0.85rem;
+            font-weight: 500;
+            margin-bottom: 6px;
+            color: var(--text);
+        }
+
+        input, textarea {
+            width: 100%;
+            padding: 9px 12px;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            font-size: 0.9rem;
+            color: var(--text);
+            background: #fff;
+            transition: border-color 0.15s;
+        }
+
+        input:focus, textarea:focus {
+            outline: none;
+            border-color: var(--primary);
+        }
+
+        textarea {
+            resize: vertical;
+            min-height: 82px;
+        }
+
+        button {
+            cursor: pointer;
+            font-weight: 500;
+            font-size: 0.9rem;
+            border-radius: 6px;
+            padding: 9px 16px;
+            border: none;
+            transition: background 0.15s, opacity 0.15s;
+        }
+
+        button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        .btn-primary {
+            background: var(--primary);
+            color: #fff;
+            width: 100%;
+        }
+
+        .btn-primary:hover:not(:disabled) {
+            background: var(--primary-hover);
+        }
+
+        .btn-sm {
+            padding: 5px 10px;
+            font-size: 0.8rem;
+            border: 1px solid var(--border);
+            background: #fff;
+            color: var(--text);
+        }
+
+        .btn-sm:hover {
+            background: #f1f5f9;
+        }
+
+        .btn-danger {
+            color: var(--danger);
+            border-color: #fecaca;
+        }
+
+        .btn-danger:hover {
+            background: #fef2f2;
+        }
+
+        .feedback {
+            margin-top: 12px;
+            font-size: 0.85rem;
+            padding: 10px 12px;
+            border-radius: 6px;
+            display: none;
+        }
+
+        .feedback.ok {
+            display: block;
+            background: #f0fdf4;
+            color: var(--success);
+            border: 1px solid #bbf7d0;
+        }
+
+        .feedback.erro {
+            display: block;
+            background: #fef2f2;
+            color: var(--danger);
+            border: 1px solid #fecaca;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.88rem;
+        }
+
+        th, td {
+            text-align: left;
+            padding: 11px 12px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        th {
+            color: var(--muted);
+            font-weight: 600;
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            letter-spacing: 0.03em;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 999px;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+
+        .badge-ativo {
+            background: #dcfce7;
+            color: var(--success);
+        }
+
+        .badge-inativo {
+            background: #f1f5f9;
+            color: var(--muted);
+        }
+
+        .acoes {
+            display: flex;
+            gap: 6px;
+        }
+
+        #log-disparo {
+            margin-top: 12px;
+            max-height: 150px;
+            overflow-y: auto;
+            font-size: 0.82rem;
+            background: #f8fafc;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            padding: 10px;
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Orquestrador de Comunicação — API Cliente</h1>
+            <p>Gerenciamento do <strong>db_cliente.db</strong> e disparo via microsserviço <strong>API Email (Porta 5001)</strong></p>
+        </header>
+
+        <div class="grid">
+            <!-- CARD 1: CREATE (CADASTRAR CLIENTE) -->
+            <div class="card">
+                <h2>Novo Cliente</h2>
+                <form id="form-cliente">
+                    <div class="form-group">
+                        <label for="nome">Nome Completo</label>
+                        <input type="text" id="nome" placeholder="Ex: Maria Oliveira" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="email">E-mail</label>
+                        <input type="email" id="email" placeholder="Ex: maria@ethereal.email" required>
+                    </div>
+                    <button type="submit" class="btn-primary">Cadastrar no Banco</button>
+                </form>
+                <div id="msg-cadastro" class="feedback"></div>
+            </div>
+
+            <!-- CARD 2: DISPARAR CAMPANHA -->
+            <div class="card">
+                <h2>Disparar Campanha (Clientes Ativos)</h2>
+                <form id="form-disparo">
+                    <div class="form-group">
+                        <label for="assunto">Assunto do E-mail</label>
+                        <input type="text" id="assunto" placeholder="Ex: Novidades da Semana" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="mensagem">Mensagem (o sistema adiciona "Olá Nome," automaticamente)</label>
+                        <textarea id="mensagem" placeholder="Confira nossas condições especiais..." required></textarea>
+                    </div>
+                    <button type="submit" id="btn-disparar" class="btn-primary">Enviar para API Email</button>
+                </form>
+                <div id="msg-disparo" class="feedback"></div>
+                <div id="log-disparo"></div>
+            </div>
+        </div>
+
+        <!-- CARD 3: READ / UPDATE / DELETE (TABELA DE CLIENTES) -->
+        <div class="card">
+            <h2>Clientes Cadastrados (<span id="contador-clientes">0</span>)</h2>
+            <div style="overflow-x: auto;">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Nome</th>
+                            <th>E-mail</th>
+                            <th>Status</th>
+                            <th>Criado em</th>
+                            <th>Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tabela-clientes">
+                        <tr><td colspan="6" style="color: var(--muted);">Carregando clientes...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const tabela = document.getElementById("tabela-clientes");
+        const contador = document.getElementById("contador-clientes");
+
+        function mostrarFeedback(elementoId, texto, tipo) {
+            const el = document.getElementById(elementoId);
+            el.textContent = texto;
+            el.className = `feedback ${tipo}`;
+        }
+
+        // R - READ: Busca clientes na API CLIENTE
+        async function carregarClientes() {
+            try {
+                const resp = await fetch("/clientes");
+                const clientes = await resp.json();
+                contador.textContent = clientes.length;
+
+                if (clientes.length === 0) {
+                    tabela.innerHTML = '<tr><td colspan="6" style="color: var(--muted);">Nenhum cliente cadastrado.</td></tr>';
+                    return;
+                }
+
+                tabela.innerHTML = clientes.map(c => `
+                    <tr>
+                        <td>#${c.id}</td>
+                        <td><strong>${c.nome}</strong></td>
+                        <td>${c.email}</td>
+                        <td>
+                            <span class="badge ${c.ativo ? 'badge-ativo' : 'badge-inativo'}">
+                                ${c.ativo ? 'ATIVO' : 'INATIVO'}
+                            </span>
+                        </td>
+                        <td style="color: var(--muted); font-size: 0.82rem;">${c.criado_em || '-'}</td>
+                        <td class="acoes">
+                            <button class="btn-sm" onclick="alternarStatus(${c.id}, ${!c.ativo})">
+                                ${c.ativo ? 'Desativar' : 'Ativar'}
+                            </button>
+                            <button class="btn-sm btn-danger" onclick="excluirCliente(${c.id}, '${c.nome}')">
+                                Excluir
+                            </button>
+                        </td>
+                    </tr>
+                `).join("");
+            } catch (erro) {
+                tabela.innerHTML = '<tr><td colspan="6" style="color: var(--danger);">Erro ao carregar clientes.</td></tr>';
+            }
+        }
+
+        // C - CREATE: Envia novo cliente para POST /clientes
+        document.getElementById("form-cliente").addEventListener("submit", async (e) => {
+            e.preventDefault();
+            const nome = document.getElementById("nome").value.trim();
+            const email = document.getElementById("email").value.trim();
+
+            const resp = await fetch("/clientes", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ nome, email })
+            });
+            const data = await resp.json();
+
+            if (resp.ok) {
+                mostrarFeedback("msg-cadastro", data.mensagem, "ok");
+                e.target.reset();
+                carregarClientes();
+            } else {
+                mostrarFeedback("msg-cadastro", data.erro || "Erro ao cadastrar.", "erro");
+            }
+        });
+
+        // U - UPDATE: Alterna ativo/inativo via PUT /clientes/<id>
+        async function alternarStatus(id, novoStatus) {
+            await fetch(`/clientes/${id}`, {
+                method: "PUT",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ ativo: novoStatus })
+            });
+            carregarClientes();
+        }
+
+        // D - DELETE: Remove cliente via DELETE /clientes/<id>
+        async function excluirCliente(id, nome) {
+            if (!confirm(`Deseja realmente excluir o cliente "${nome}"?`)) return;
+            await fetch(`/clientes/${id}`, { method: "DELETE" });
+            carregarClientes();
+        }
+
+        // DISPARO: Chama POST /notificar-clientes -> API EMAIL (5001)
+        document.getElementById("form-disparo").addEventListener("submit", async (e) => {
+            e.preventDefault();
+            const btn = document.getElementById("btn-disparar");
+            const logBox = document.getElementById("log-disparo");
+            const assunto = document.getElementById("assunto").value.trim();
+            const mensagem = document.getElementById("mensagem").value.trim();
+
+            btn.disabled = true;
+            btn.textContent = "Disparando...";
+            logBox.style.display = "none";
+
+            try {
+                const resp = await fetch("/notificar-clientes", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ assunto, mensagem })
+                });
+                const data = await resp.json();
+
+                mostrarFeedback("msg-disparo", `Processamento concluído: ${data.total_processado} envio(s) processado(s).`, "ok");
+                logBox.style.display = "block";
+                logBox.innerHTML = data.detalhes.map(item =>
+                    `<div><strong>${item.destinatario}</strong>: ${item.status}</div>`
+                ).join("");
+            } catch (erro) {
+                mostrarFeedback("msg-disparo", "Falha de comunicação com o servidor.", "erro");
+            } finally {
+                btn.disabled = false;
+                btn.textContent = "Enviar para API Email";
+            }
+        });
+
+        carregarClientes();
+    </script>
+</body>
+</html>
