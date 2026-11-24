@@ -3,15 +3,17 @@ from flask import Flask, jsonify, render_template, request
 from flask_sqlalchemy import SQLAlchemy
 import requests
 
+# Cria a aplicação da API CLIENTE e conecta no banco de clientes (db_cliente.db)
 app = Flask(__name__)
 app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///db_cliente.db"
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 db = SQLAlchemy(app)
 
+# Endereço da outra API (o serviço que envia os e-mails na porta 5001)
 URL_API_EMAIL = "http://127.0.0.1:5001/disparar"
 
 
-# Banco exclusivo de Clientes (DB CLIENTE)
+# Molde da tabela que guarda os clientes cadastrados
 class Cliente(db.Model):
     __tablename__ = "clientes"
     id = db.Column(db.Integer, primary_key=True)
@@ -25,24 +27,15 @@ class Cliente(db.Model):
 
 with app.app_context():
     pass
-    # db.create_all()
-    # if Cliente.query.count() == 0:
-    #     iniciais = [
-    #         Cliente(nome="Lucas Sampaio", email="lucas.teste1@ethereal.email"),
-    #         Cliente(nome="Gabrielle Alves", email="gabrielle.teste2@ethereal.email"),
-    #         Cliente(nome="Cliente VIP", email="cliente3.teste@ethereal.email"),
-    #     ]
-    #     db.session.bulk_save_objects(iniciais)
-    #     db.session.commit()
 
 
-# Seta bidirecional: FRONT <-> API CLIENTE
+# TELA INICIAL: abre a página visual (index.html) no navegador
 @app.route("/")
 def front():
     return render_template("index.html")
 
 
-# R - READ: Listar clientes
+# LISTAR (READ): busca todos os clientes no banco e manda para a tela
 @app.route("/clientes", methods=["GET"])
 def listar_clientes():
     clientes = Cliente.query.all()
@@ -58,13 +51,14 @@ def listar_clientes():
     ])
 
 
-# C - CREATE: Cadastrar cliente
+# CADASTRAR (CREATE): salva um cliente novo no banco
 @app.route("/clientes", methods=["POST"])
 def criar_cliente():
     dados = request.get_json()
     nome = dados.get("nome")
     email = dados.get("email")
 
+    # Impede salvar vazio ou duplicado
     if not nome or not email:
         return jsonify({"erro": "Nome e e-mail são obrigatórios"}), 400
 
@@ -77,7 +71,7 @@ def criar_cliente():
     return jsonify({"mensagem": "Cliente cadastrado com sucesso!", "id": novo.id}), 201
 
 
-# U - UPDATE: Atualizar cliente
+# ATUALIZAR (UPDATE): altera dados ou liga/desliga o status ativo do cliente
 @app.route("/clientes/<int:id>", methods=["PUT"])
 def atualizar_cliente(id):
     cliente = Cliente.query.get_or_404(id)
@@ -92,7 +86,7 @@ def atualizar_cliente(id):
     return jsonify({"mensagem": "Cliente atualizado com sucesso!"})
 
 
-# D - DELETE: Excluir cliente
+# EXCLUIR (DELETE): apaga o cliente do banco pelo ID
 @app.route("/clientes/<int:id>", methods=["DELETE"])
 def deletar_cliente(id):
     cliente = Cliente.query.get_or_404(id)
@@ -101,16 +95,18 @@ def deletar_cliente(id):
     return jsonify({"mensagem": "Cliente removido com sucesso!"})
 
 
-# Seta horizontal: API CLIENTE -> API EMAIL (via HTTP)
+# DISPARAR CAMPANHA: pega só os clientes ATIVOS e manda a ordem para a API EMAIL
 @app.route("/notificar-clientes", methods=["POST"])
 def notificar_clientes():
     dados = request.get_json()
     assunto = dados.get("assunto")
     mensagem = dados.get("mensagem")
 
+    # 1. Filtra no banco apenas quem está ativo
     clientes = Cliente.query.filter_by(ativo=True).all()
     resultados = []
 
+    # 2. Para cada cliente ativo, personaliza o "Olá Nome" e envia para a porta 5001
     for c in clientes:
         payload = {
             "destinatario": c.email,
@@ -121,6 +117,7 @@ def notificar_clientes():
             resp = requests.post(URL_API_EMAIL, json=payload, timeout=15)
             resultados.append(resp.json())
         except Exception as e:
+            # Se a API EMAIL estiver desligada, avisa sem travar o sistema
             resultados.append({
                 "destinatario": c.email,
                 "status": f"Erro de comunicação com API EMAIL: {e}",
