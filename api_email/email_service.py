@@ -19,18 +19,18 @@ class DisparadorEmail:
         self.smtp_pass = os.getenv("EMAIL_PASS")
 
     def enviar_mensagem(self, destinatario, assunto, corpo):
-        # 1. Confere se o usuário e a senha realmente foram carregados
+        # Confere se o usuário e a senha realmente foram carregados
         if not self.smtp_user or not self.smtp_pass:
             raise Exception(f"Credenciais ausentes no arquivo: {env_path}")
 
-        # 2. Monta o envelope do e-mail (De, Para, Assunto e Texto)
+        #  Monta o envelope do e-mail (De, Para, Assunto e Texto)
         msg = MIMEMultipart()
         msg["From"] = self.smtp_user
         msg["To"] = destinatario
         msg["Subject"] = assunto
         msg.attach(MIMEText(corpo, "plain"))
 
-        # 3. Conecta no servidor de e-mail, faz login e envia a mensagem
+        #  Conecta no servidor de e-mail, faz login e envia a mensagem
         with smtplib.SMTP(self.smtp_host, self.smtp_port) as server:
             server.starttls()  # Ativa conexão criptografada (segura)
             server.login(self.smtp_user, self.smtp_pass)

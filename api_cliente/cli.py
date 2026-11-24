@@ -22,7 +22,7 @@ Bancos de dados:
 
 
 def main():
-    # 1. Configura todas as opções que o usuário pode digitar no terminal
+    #  Configura todas as opções que o usuário pode digitar no terminal
     parser = argparse.ArgumentParser(
         description="CLI da API CLIENTE - Orquestrador de Comunicação",
         epilog=montar_epilogo(),
@@ -37,7 +37,7 @@ def main():
 
     args = parser.parse_args()
 
-    # 2. Se nenhuma ação foi escolhida, mostra a ajuda na tela
+    # Se nenhuma ação foi escolhida, mostra a ajuda na tela
     if not (args.disparar or args.listar or args.cadastrar):
         parser.print_help()
         return

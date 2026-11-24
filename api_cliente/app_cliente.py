@@ -102,11 +102,11 @@ def notificar_clientes():
     assunto = dados.get("assunto")
     mensagem = dados.get("mensagem")
 
-    # 1. Filtra no banco apenas quem está ativo
+    #  Filtra no banco apenas quem está ativo
     clientes = Cliente.query.filter_by(ativo=True).all()
     resultados = []
 
-    # 2. Para cada cliente ativo, personaliza o "Olá Nome" e envia para a porta 5001
+    #  Para cada cliente ativo, personaliza o "Olá Nome" e envia para a porta 5001
     for c in clientes:
         payload = {
             "destinatario": c.email,

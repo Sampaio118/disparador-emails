@@ -32,17 +32,17 @@ disparador = DisparadorEmail()
 # ROTA DE ENVIO: recebe a ordem da API CLIENTE, envia o e-mail e grava o resultado
 @app.route("/disparar", methods=["POST"])
 def disparar():
-    # 1. Lê os dados enviados (para quem, assunto e mensagem)
+    #  Lê os dados enviados (para quem, assunto e mensagem)
     dados = request.get_json()
     destinatario = dados.get("destinatario")
     assunto = dados.get("assunto")
     corpo = dados.get("mensagem")
 
-    # 2. Barra o pedido se estiver faltando alguma informação
+    #  Barra o pedido se estiver faltando alguma informação
     if not destinatario or not assunto or not corpo:
         return jsonify({"erro": "Payload incompleto"}), 400
 
-    # 3. Tenta enviar o e-mail e anota se deu certo ou se deu erro
+    #  Tenta enviar o e-mail e anota se deu certo ou se deu erro
     try:
         disparador.enviar_mensagem(destinatario, assunto, corpo)
         status_final = "SUCESSO"
@@ -53,7 +53,7 @@ def disparar():
         erro_tecnico = str(e)
         codigo_http = 500
 
-    # 4. Salva o comprovante do envio no banco db_email.db para auditoria
+    #  Salva o comprovante do envio no banco db_email.db para auditoria
     log = LogEmail(
         destinatario=destinatario,
         assunto=assunto,
@@ -63,7 +63,7 @@ def disparar():
     db.session.add(log)
     db.session.commit()
 
-    # 5. Responde para quem pediu dizendo se foi enviado ou se falhou
+    #  Responde para quem pediu dizendo se foi enviado ou se falhou
     return jsonify({
         "status": status_final,
         "destinatario": destinatario,
