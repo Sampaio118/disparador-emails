@@ -127,5 +127,5 @@ def notificar_clientes():
 
 
 if __name__ == "__main__":
-    print("🏢 API CLIENTE + FRONT rodando na porta 5000...")
+    print(" API CLIENTE + FRONT rodando na porta 5000...")
     app.run(port=5000, debug=True)

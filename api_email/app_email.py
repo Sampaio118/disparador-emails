@@ -1,93 +1,94 @@
-from flask import Flask, jsonify, request
-from flask_sqlalchemy import SQLAlchemy
-from datetime import datetime
-from email_service import DisparadorEmail
+import argparse
+from pathlib import Path
+import requests
 
-# Cria a aplicação da API EMAIL e conecta no banco exclusivo de histórico (db_email.db)
-app = Flask(__name__)
-app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///db_email.db"
-app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
-db = SQLAlchemy(app)
+# Endereço base da API EMAIL rodando na porta 5001
+BASE_URL_EMAIL = "http://127.0.0.1:5001"
 
-
-# Molde da tabela que guarda o histórico de cada e-mail enviado
-class LogEmail(db.Model):
-    __tablename__ = "logs_envio"
-    id = db.Column(db.Integer, primary_key=True)
-    destinatario = db.Column(db.String(120), nullable=False)
-    assunto = db.Column(db.String(200), nullable=False)
-    status = db.Column(db.String(30), nullable=False)       # SUCESSO ou FALHA
-    detalhe_erro = db.Column(db.Text, nullable=True)        # Motivo do erro, se falhar
-    data_envio = db.Column(db.String(50), default=lambda: datetime.now().strftime("%d/%m/%Y %H:%M:%S"))
+# Caminho do banco de auditoria onde ficam os logs de envio
+DB_EMAIL_PATH = Path(__file__).resolve().parent / "instance" / "db_email.db"
 
 
-# Cria a tabela automaticamente no banco se ela ainda não existir
-with app.app_context():
-    db.create_all()
+# Monta o bloco extra que aparece no final da tela de ajuda (-h / --help)
+def montar_epilogo():
+    status_db = "encontrado" if DB_EMAIL_PATH.exists() else "não encontrado"
+    return f"""
+Banco de auditoria:
+  DB EMAIL : {DB_EMAIL_PATH} ({status_db})
+"""
 
-# Prepara o motor que envia os e-mails de verdade
-disparador = DisparadorEmail()
 
-
-# ROTA DE ENVIO: recebe a ordem da API CLIENTE, envia o e-mail e grava o resultado
-@app.route("/disparar", methods=["POST"])
-def disparar():
-    #  Lê os dados enviados (para quem, assunto e mensagem)
-    dados = request.get_json()
-    destinatario = dados.get("destinatario")
-    assunto = dados.get("assunto")
-    corpo = dados.get("mensagem")
-
-    #  Barra o pedido se estiver faltando alguma informação
-    if not destinatario or not assunto or not corpo:
-        return jsonify({"erro": "Payload incompleto"}), 400
-
-    #  Tenta enviar o e-mail e anota se deu certo ou se deu erro
-    try:
-        disparador.enviar_mensagem(destinatario, assunto, corpo)
-        status_final = "SUCESSO"
-        erro_tecnico = None
-        codigo_http = 200
-    except Exception as e:
-        status_final = "FALHA"
-        erro_tecnico = str(e)
-        codigo_http = 500
-
-    #  Salva o comprovante do envio no banco db_email.db para auditoria
-    log = LogEmail(
-        destinatario=destinatario,
-        assunto=assunto,
-        status=status_final,
-        detalhe_erro=erro_tecnico
+def main():
+    # =========================================================================
+    # TELA DE AJUDA (-h / --help): o argparse cria automaticamente o -h e o
+    # --help aqui e monta a tela com description, help=... e epilog.
+    # =========================================================================
+    parser = argparse.ArgumentParser(
+        description="CLI da API EMAIL - Consulta de Logs e Teste de Envio (Porta 5001)",  # Título da tela -h / --help
+        epilog=montar_epilogo(),                                                          # Rodapé da tela -h / --help (status do banco)
+        formatter_class=argparse.RawDescriptionHelpFormatter,
     )
-    db.session.add(log)
-    db.session.commit()
 
-    #  Responde para quem pediu dizendo se foi enviado ou se falhou
-    return jsonify({
-        "status": status_final,
-        "destinatario": destinatario,
-        "detalhe_erro": erro_tecnico
-    }), codigo_http
+    # Cada linha abaixo define uma opção do terminal e o texto exibido no -h / --help:
+    parser.add_argument(
+        "--logs",
+        action="store_true",
+        help="[-h/--help] Lista o histórico de envios (SUCESSO ou FALHA) gravado na API EMAIL.",
+    )
+    parser.add_argument(
+        "--limite",
+        type=int,
+        default=10,
+        help="[-h/--help] Quantidade máxima de registros exibidos ao listar os logs (padrão: 10).",
+    )
+    parser.add_argument(
+        "--teste-envio",
+        nargs=3,
+        metavar=("EMAIL", "ASSUNTO", "MENSAGEM"),
+        help="[-h/--help] Envia um e-mail de teste direto para a API EMAIL.",
+    )
 
+    args = parser.parse_args()  # Lê os argumentos e exibe a ajuda sozinho se digitar -h ou --help
 
-# ROTA DE AUDITORIA: mostra todo o histórico de envios (do mais recente para o mais antigo)
-@app.route("/logs", methods=["GET"])
-def listar_logs():
-    logs = LogEmail.query.order_by(LogEmail.id.desc()).all()
-    return jsonify([
-        {
-            "id": l.id,
-            "destinatario": l.destinatario,
-            "assunto": l.assunto,
-            "status": l.status,
-            "detalhe_erro": l.detalhe_erro,
-            "data_envio": l.data_envio
+    # Se rodar 'python cli_email.py' sem opção nenhuma, mostra a tela de ajuda (-h / --help)
+    if not (args.logs or args.teste_envio):
+        parser.print_help()  # Exibe a tela de ajuda na tela
+        return
+
+    # OPÇÃO 1 (--logs): consulta o histórico de envios na API EMAIL (GET /logs)
+    if args.logs:
+        try:
+            resp = requests.get(f"{BASE_URL_EMAIL}/logs", timeout=10)
+            resp.raise_for_status()
+            logs = resp.json()[: args.limite]
+            print(f"📜 Exibindo até {args.limite} registros mais recentes da API EMAIL:")
+            for item in logs:
+                print(
+                    f"   [{item['id']}] {item['data_envio']} | {item['destinatario']} | "
+                    f"{item['status']} | Assunto: {item['assunto']}"
+                )
+        except requests.exceptions.ConnectionError:
+            print(" ERRO: A API EMAIL (porta 5001) está desligada!")
+        return
+
+    # OPÇÃO 2 (--teste-envio): manda um e-mail de teste direto para a API EMAIL (POST /disparar)
+    if args.teste_envio:
+        destinatario, assunto, mensagem = args.teste_envio
+        payload = {
+            "destinatario": destinatario,
+            "assunto": assunto,
+            "mensagem": mensagem,
         }
-        for l in logs
-    ])
+        try:
+            resp = requests.post(f"{BASE_URL_EMAIL}/disparar", json=payload, timeout=15)
+            dados = resp.json()
+            print(f" Resultado do envio para {destinatario}: {dados.get('status')}")
+            if dados.get("detalhe_erro"):
+                print(f"   Detalhe: {dados.get('detalhe_erro')}")
+        except requests.exceptions.ConnectionError:
+            print(" ERRO: A API EMAIL (porta 5001) está desligada!")
 
 
+# Executa apenas a CLI ao rodar este arquivo diretamente no terminal
 if __name__ == "__main__":
-    print("⚙️ API EMAIL (Motor Cego) rodando na porta 5001...")
-    app.run(port=5001, debug=True)
+    main()
